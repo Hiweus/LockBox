@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func GenerateTOTP(secretKey string, codeSize uint, timestamp int64) uint32 {
+func GenerateTOTP(secretKey string, codeSize uint, period uint64, timestamp int64) uint32 {
 	// The base32 encoded secret key string is decoded to a byte slice
 	base32Decoder := base32.StdEncoding.WithPadding(base32.NoPadding)
 	secretKey = strings.ToUpper(strings.TrimSpace(secretKey)) // preprocess
@@ -18,7 +18,7 @@ func GenerateTOTP(secretKey string, codeSize uint, timestamp int64) uint32 {
 	// The truncated timestamp / 30 is converted to an 8-byte big-endian
 	// unsigned integer slice
 	timeBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(timeBytes, uint64(timestamp)/30)
+	binary.BigEndian.PutUint64(timeBytes, uint64(timestamp)/period)
 
 	// The timestamp bytes are concatenated with the decoded secret key
 	// bytes. Then a 20-byte SHA-1 hash is calculated from the byte slice

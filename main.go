@@ -21,7 +21,7 @@ type Credential struct {
 
 func (c Credential) GetContent() string {
 	if c.Type == "totp" {
-		return fmt.Sprintf("%d", totp.GenerateTOTP(c.Content, 6, time.Now().Unix()))
+		return fmt.Sprintf("%d", totp.GenerateTOTP(c.Content, 6, 30, time.Now().Unix()))
 	}
 
 	return c.Content
