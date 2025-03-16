@@ -58,6 +58,7 @@ func (c *CredentialRepository) Save(credential Credential) error {
 		return err
 	}
 
+	c.credentials = credentials
 	return nil
 }
 
@@ -74,6 +75,10 @@ func (c *CredentialRepository) Find(key string) (*Credential, error) {
 	}
 
 	return nil, nil
+}
+
+func (c *CredentialRepository) Fetch() []Credential {
+	return c.credentials
 }
 
 func New(masterKey string) *CredentialRepository {

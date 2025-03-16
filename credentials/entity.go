@@ -20,3 +20,7 @@ func (c Credential) GetContent() string {
 
 	return c.Content
 }
+
+func (c Credential) String() string {
+	return c.Key
+}
