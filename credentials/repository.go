@@ -13,7 +13,14 @@ type CredentialRepository struct {
 	credentials []Credential
 }
 
-const credentialFile = "credentials.json"
+func getCompleteFileName() string {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
+
+	return filepath.Join(homeDir, ".credentials-lb.json")
+}
 
 func fileExists(filename string) bool {
 	_, err := os.Stat(filename)
@@ -25,18 +32,18 @@ func (c *CredentialRepository) loadCredentials() ([]Credential, error) {
 		return c.credentials, nil
 	}
 
-	if !fileExists(credentialFile) {
+	if !fileExists(getCompleteFileName()) {
 		encryptedFile, err := encryption.Encrypt([]byte("[]"), c.masterKey)
 		if err != nil {
 			return nil, err
 		}
-		err = os.WriteFile(credentialFile, encryptedFile, 0644)
+		err = os.WriteFile(getCompleteFileName(), encryptedFile, 0644)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	credentialFileInput, err := os.ReadFile(filepath.Join(".", credentialFile))
+	credentialFileInput, err := os.ReadFile(getCompleteFileName())
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +82,7 @@ func (c *CredentialRepository) Save(credential Credential) error {
 		return err
 	}
 
-	err = os.WriteFile(credentialFile, encryptedCredentials, 0644)
+	err = os.WriteFile(getCompleteFileName(), encryptedCredentials, 0644)
 	if err != nil {
 		return err
 	}
