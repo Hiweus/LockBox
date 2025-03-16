@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+
+	"github.com/hiweus/LockBox/encryption"
 )
 
 type CredentialRepository struct {
@@ -18,9 +20,17 @@ func fileExists(filename string) bool {
 	return !os.IsNotExist(err)
 }
 
-func loadCredentials() ([]Credential, error) {
+func (c *CredentialRepository) loadCredentials() ([]Credential, error) {
+	if c.credentials != nil {
+		return c.credentials, nil
+	}
+
 	if !fileExists(credentialFile) {
-		err := os.WriteFile(credentialFile, []byte("[]"), 0644)
+		encryptedFile, err := encryption.Encrypt([]byte("[]"), c.masterKey)
+		if err != nil {
+			return nil, err
+		}
+		err = os.WriteFile(credentialFile, encryptedFile, 0644)
 		if err != nil {
 			return nil, err
 		}
@@ -31,17 +41,24 @@ func loadCredentials() ([]Credential, error) {
 		return nil, err
 	}
 
-	var credentials []Credential
-	err = json.Unmarshal(credentialFileInput, &credentials)
+	decryptedCredentials, err := encryption.Decrypt([]byte(credentialFileInput), c.masterKey)
+
 	if err != nil {
 		return nil, err
 	}
 
+	var credentials []Credential
+	err = json.Unmarshal(decryptedCredentials, &credentials)
+	if err != nil {
+		return nil, err
+	}
+
+	c.credentials = credentials
 	return credentials, nil
 }
 
 func (c *CredentialRepository) Save(credential Credential) error {
-	credentials, err := loadCredentials()
+	credentials, err := c.loadCredentials()
 	if err != nil {
 		return err
 	}
@@ -53,7 +70,12 @@ func (c *CredentialRepository) Save(credential Credential) error {
 		return err
 	}
 
-	err = os.WriteFile(credentialFile, credentialsJson, 0644)
+	encryptedCredentials, err := encryption.Encrypt(credentialsJson, c.masterKey)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(credentialFile, encryptedCredentials, 0644)
 	if err != nil {
 		return err
 	}
@@ -63,7 +85,7 @@ func (c *CredentialRepository) Save(credential Credential) error {
 }
 
 func (c *CredentialRepository) Find(key string) (*Credential, error) {
-	credentials, err := loadCredentials()
+	credentials, err := c.loadCredentials()
 	if err != nil {
 		return nil, err
 	}
@@ -82,12 +104,13 @@ func (c *CredentialRepository) Fetch() []Credential {
 }
 
 func New(masterKey string) *CredentialRepository {
-	credentials, err := loadCredentials()
+	c := &CredentialRepository{
+		masterKey: masterKey,
+	}
+	_, err := c.loadCredentials()
 	if err != nil {
 		panic(err)
 	}
-	return &CredentialRepository{
-		masterKey:   masterKey,
-		credentials: credentials,
-	}
+
+	return c
 }

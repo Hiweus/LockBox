@@ -5,11 +5,12 @@ import (
 	"crypto/sha1"
 	"encoding/base32"
 	"encoding/binary"
+	"fmt"
 	"math"
 	"strings"
 )
 
-func GenerateTOTP(secretKey string, codeSize uint, period uint64, timestamp int64) uint32 {
+func GenerateTOTP(secretKey string, codeSize uint, period uint64, timestamp int64) string {
 	// The base32 encoded secret key string is decoded to a byte slice
 	base32Decoder := base32.StdEncoding.WithPadding(base32.NoPadding)
 	secretKey = strings.ToUpper(strings.TrimSpace(secretKey)) // preprocess
@@ -35,5 +36,10 @@ func GenerateTOTP(secretKey string, codeSize uint, period uint64, timestamp int6
 	truncatedHash := binary.BigEndian.Uint32(h[offset:]) & 0x7FFFFFFF
 
 	// Take modulo 1_000_000 to get a 6-digit code
-	return truncatedHash % uint32(math.Pow(10, float64(codeSize)))
+	number := truncatedHash % uint32(math.Pow(10, float64(codeSize)))
+	numberWithoutPad := fmt.Sprintf("%d", number)
+
+	// Convert the number to a string and pad it with zeros if necessary
+	padding := strings.Repeat("0", int(codeSize)-len(numberWithoutPad))
+	return padding + numberWithoutPad
 }
