@@ -2,6 +2,12 @@
 
 CLI tool to manage `totp` credentials :lock:
 
+## Installing the tool
+
+```bash
+go build . && sudo cp LockBox /usr/bin/lb
+```
+
 ## TODO :bulb:
 - [X] Refactor encryption module to Vault module
   - [X] Keep the password in memory
