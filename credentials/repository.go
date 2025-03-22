@@ -9,8 +9,8 @@ import (
 )
 
 type CredentialRepository struct {
-	masterKey   string
 	credentials []Credential
+	vault       *encryption.Vault
 }
 
 func getCompleteFileName() string {
@@ -33,7 +33,7 @@ func (c *CredentialRepository) loadCredentials() ([]Credential, error) {
 	}
 
 	if !fileExists(getCompleteFileName()) {
-		encryptedFile, err := encryption.Encrypt([]byte("[]"), c.masterKey)
+		encryptedFile, err := c.vault.Encrypt([]byte("[]"))
 		if err != nil {
 			return nil, err
 		}
@@ -48,7 +48,7 @@ func (c *CredentialRepository) loadCredentials() ([]Credential, error) {
 		return nil, err
 	}
 
-	decryptedCredentials, err := encryption.Decrypt([]byte(credentialFileInput), c.masterKey)
+	decryptedCredentials, err := c.vault.Decrypt(credentialFileInput)
 
 	if err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func (c *CredentialRepository) Save(credential Credential) error {
 		return err
 	}
 
-	encryptedCredentials, err := encryption.Encrypt(credentialsJson, c.masterKey)
+	encryptedCredentials, err := c.vault.Encrypt(credentialsJson)
 	if err != nil {
 		return err
 	}
@@ -110,9 +110,9 @@ func (c *CredentialRepository) Fetch() []Credential {
 	return c.credentials
 }
 
-func New(masterKey string) *CredentialRepository {
+func New(vault *encryption.Vault) *CredentialRepository {
 	c := &CredentialRepository{
-		masterKey: masterKey,
+		vault: vault,
 	}
 	_, err := c.loadCredentials()
 	if err != nil {

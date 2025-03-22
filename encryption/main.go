@@ -10,9 +10,13 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
+type Vault struct {
+	password string
+}
+
 // Encrypt encrypts a file in memory with a password using Argon2 and AES-GCM.
 // It concatenates the salt to the output ciphertext and returns the result in base64 encoding.
-func Encrypt(data []byte, password string) ([]byte, error) {
+func (v *Vault) Encrypt(data []byte) ([]byte, error) {
 	// Generate a random salt
 	salt := make([]byte, 16)
 	_, err := rand.Read(salt)
@@ -21,7 +25,7 @@ func Encrypt(data []byte, password string) ([]byte, error) {
 	}
 
 	// Derive key from password using Argon2
-	key := argon2.Key([]byte(password), salt, 1, 64*1024, 4, 32)
+	key := argon2.Key([]byte(v.password), salt, 1, 64*1024, 4, 32)
 
 	// Create AES-GCM cipher block
 	block, err := aes.NewCipher(key)
@@ -55,7 +59,7 @@ func Encrypt(data []byte, password string) ([]byte, error) {
 
 // Decrypt decrypts a file in memory with a password using Argon2 and AES-GCM.
 // It extracts the salt from the ciphertext and uses it for key derivation.
-func Decrypt(encoded []byte, password string) ([]byte, error) {
+func (v *Vault) Decrypt(encoded []byte) ([]byte, error) {
 	// Decode the base64-encoded ciphertext
 	ciphertext, err := base64.StdEncoding.DecodeString(string(encoded))
 	if err != nil {
@@ -71,7 +75,7 @@ func Decrypt(encoded []byte, password string) ([]byte, error) {
 	ciphertext = ciphertext[16:]
 
 	// Derive key from password using Argon2
-	key := argon2.Key([]byte(password), salt, 1, 64*1024, 4, 32)
+	key := argon2.Key([]byte(v.password), salt, 1, 64*1024, 4, 32)
 
 	// Create AES-GCM cipher block
 	block, err := aes.NewCipher(key)
@@ -99,4 +103,8 @@ func Decrypt(encoded []byte, password string) ([]byte, error) {
 	}
 
 	return plaintext, nil
+}
+
+func New(password string) *Vault {
+	return &Vault{password: password}
 }

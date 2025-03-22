@@ -3,9 +3,13 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/hiweus/LockBox/credentials"
+	"github.com/hiweus/LockBox/encryption"
+	"github.com/hiweus/LockBox/externalSync"
 
 	"github.com/manifoldco/promptui"
 )
@@ -83,13 +87,50 @@ func getOptions(options []string) (string, error) {
 	return result, nil
 }
 
-func main() {
+func performLogin(vault *encryption.Vault) {
+	if len(os.Args) < 2 {
+		return
+	}
 
+	username, err := getInput("Username", false, false)
+	if err != nil {
+		log.Fatal("Canceled, exiting")
+	}
+
+	token, err := getInput("Token", true, false)
+	if err != nil {
+		log.Fatal("Canceled, exiting")
+	}
+
+	syncTool := externalSync.New(username, token, vault)
+	syncTool.Persist()
+	syncTool.Push()
+
+}
+
+func main() {
 	credentialMasterKey, err := getInput("Master key", true, false)
 	if err != nil {
 		log.Fatal("Canceled, exiting")
 	}
-	credentialRepository := credentials.New(credentialMasterKey)
+	vault := encryption.New(credentialMasterKey)
+
+	performLogin(vault)
+
+	syncAgent := externalSync.Load(vault)
+	syncAgent.Push()
+	syncAgent.Pull()
+
+	go func() {
+		for {
+			time.Sleep(5 * time.Second)
+			syncAgent.Push()
+		}
+	}()
+
+	fmt.Println("Welcome to LockBox")
+
+	credentialRepository := credentials.New(vault)
 
 	for {
 		selectedAction, err := getOptions([]string{
@@ -128,9 +169,12 @@ func main() {
 			}
 
 			newCredential := credentials.Credential{
-				Type:    credentialType,
-				Key:     fmt.Sprintf("%s:%s", credentialKey, credentialType),
-				Content: credentialValue,
+				Type:      credentialType,
+				Key:       fmt.Sprintf("%s:%s", credentialKey, credentialType),
+				Content:   credentialValue,
+				CreatedAt: time.Now().UTC(),
+				UpdatedAt: time.Now().UTC(),
+				Synced:    false,
 			}
 
 			err = credentialRepository.Save(newCredential)
@@ -138,6 +182,7 @@ func main() {
 				log.Fatal("Error saving credential", err)
 			} else {
 				fmt.Println("Credential saved")
+				go syncAgent.Push()
 			}
 		} else {
 			log.Fatal("Invalid action")

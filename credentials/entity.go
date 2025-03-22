@@ -8,9 +8,12 @@ import (
 )
 
 type Credential struct {
-	Content string `json:"content"`
-	Type    string `json:"type"`
-	Key     string `json:"key"`
+	Content   string    `json:"content"`
+	Type      string    `json:"type"`
+	Key       string    `json:"key"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Synced    bool      `json:"synced"`
 }
 
 func (c Credential) GetContent() string {
